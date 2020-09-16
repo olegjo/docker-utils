@@ -1,0 +1,38 @@
+{
+  "name": "@olegjo/docker-utils",
+  "private": false,
+  "version": "0.2.0",
+  "description": "Package to manage docker from a TypeScript or JavaScript based application.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "lint": "tslint --project tsconfig.json",
+    "build": "tsc",
+    "test": "jest",
+    "coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@types/yamljs": "^0.2.31",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.13",
+    "jest": "^26.4.2",
+    "ts-jest": "^26.3.0",
+    "tslint": "^5.20.1",
+    "typescript": "^3.7.4"
+  },
+  "author": "Ole Gunnar Johansen",
+  "license": "MIT",
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olegjo/docker-utils.git"
+  },
+  "bugs": {
+    "url": "https://github.com/olegjo/docker-utils/issues"
+  },
+  "homepage": "https://github.com/olegjo/docker-utils#readme"
+}
