@@ -1,3 +1,10 @@
+
+export interface INetworkDefinition {
+    internal: boolean;
+}
+
+export type NetworkJson = string;
+
 export class Network {
     readonly name: string;
     readonly internal: boolean;
@@ -13,5 +20,10 @@ export class Network {
                 internal: this.internal,
             },
         };
+    }
+
+    static fromJson(name: string, definition: INetworkDefinition): Network {
+        const ret = new Network(name, definition.internal);
+        return ret;
     }
 }

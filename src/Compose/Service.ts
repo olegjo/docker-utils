@@ -1,14 +1,23 @@
-import { Network } from "./Network";
-import { Volume } from "./Volume";
+import { Network, NetworkJson, INetworkDefinition } from "./Network";
+import { Port, IPortJson } from './Port';
+import { Volume, VolumeJson, IVolumeDefinition, IVolumeOptions } from "./Volume";
 
 type Restart = "" | "no" | "on-failure" | "unless-stopped" | "always";
+
+export interface IServiceJson {
+    image: string;
+    ports?: IPortJson[];
+    networks?: NetworkJson[];
+    volumes?: VolumeJson[];
+    restart?: Restart;
+}
 
 export class Service {
     private serviceName: string;
     private image: string;
-    private ports: string[] = [];
     private envionmentVariables: {[name: string]: any} = {};
-    private volumes: {volume: Volume, to: string}[] = [];
+    private volumes: {volume: Volume, target: string, options?: Partial<IVolumeOptions>}[] = [];
+    private ports: Port[] = [];
     
     public dependsOn: Service[] = [];
     public restart: Restart = "";
@@ -22,12 +31,16 @@ export class Service {
         this.image = image;
     }
 
-    public addPort(from: string | number, to: string | number) {
-        this.ports.push(`${from}:${to}`);
+    public addPort(port: Port) {
+        this.ports.push(port);
     }
 
-    public addVolume(volume: Volume, locationInContainer: string) {
-        this.volumes.push({volume, to: locationInContainer});
+    public setPorts(ports: Port[]) {
+        this.ports = ports;
+    }
+
+    public addVolume(volume: Volume, locationInContainer: string, options?: Partial<IVolumeOptions>) {
+        this.volumes.push({volume, target: locationInContainer, options});
     }
 
     public getVolumes() {
@@ -61,7 +74,7 @@ export class Service {
     }
 
     private compileVolumes() {
-        return this.volumes.map((v) => v.volume.toJsonService(v.to));
+        return this.volumes.map((v) => v.volume.toJsonService(v.target, v.options));
     }
 
     private compileNetworks() {
@@ -69,7 +82,7 @@ export class Service {
     }
 
     private compilePorts() {
-        return this.ports;
+        return this.ports.map((v) => v.compile());
     }
 
     private compileDependsOn() {
@@ -82,5 +95,35 @@ export class Service {
 
     get name(): string {
         return this.serviceName;
+    }
+
+    static create(name: string, serviceObject: IServiceJson, volumeDefinitions: {[name: string]: IVolumeDefinition}, networkDefinitions: {[name: string]: INetworkDefinition}): Service {
+        const ret = new Service(name, serviceObject.image);
+        
+        if (serviceObject.ports && serviceObject.ports.length > 0) {
+            for (const portObj of serviceObject.ports) {
+                ret.addPort(Port.create(portObj));
+            }
+        }
+
+        if (serviceObject.networks && serviceObject.networks.length > 0) {
+            for (const item of serviceObject.networks) {
+                ret.networks.push(Network.fromJson(item, networkDefinitions[item]));
+            }
+        }
+
+        if (serviceObject.volumes && serviceObject.volumes.length > 0) {
+            for (const item of serviceObject.volumes) {
+                const V = Volume.fromJson(item);
+                ret.addVolume(V[0], V[1], V[2]);
+            }
+        }
+
+        if (serviceObject.restart) {
+            // TODO: validate restart string
+            ret.restart = serviceObject.restart;
+        }
+
+        return ret;
     }
 }

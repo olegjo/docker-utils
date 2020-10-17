@@ -1,0 +1,36 @@
+version: '2.3'
+services:
+    database:
+        image: mongodb
+        restart: unless-stopped
+        networks:
+            - net_external
+        volumes:
+            - 'db_data:/data/db'
+    nginx:
+        image: nginx
+        ports:
+            - '8080:8080'
+        depends_on:
+            - database
+        restart: unless-stopped
+        networks:
+            - net_external
+        volumes:
+            -
+                type: bind
+                source: ./conf/
+                target: /var/nginx/conf
+                readOnly: true
+                volume:
+                    nocopy: true
+                bind:
+                    propagation: propagation_value
+                tmpfs:
+                    size: 1234
+                consistency: cached
+networks:
+    net_external:
+        internal: false
+volumes:
+    db_data: {}

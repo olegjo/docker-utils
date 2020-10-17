@@ -1,5 +1,19 @@
-import { Service } from "./Service";
+import { Service, IServiceJson } from "./Service";
 import YAML from "yamljs";
+import { INetworkDefinition } from './Network';
+import { IVolumeDefinition } from "./Volume";
+import * as fs from "fs";
+
+export interface IComposeFileJson {
+    version: string;
+    services: IServiceJson[];
+    networks: {
+        [name: string]: INetworkDefinition;
+    };
+    volumes: {
+        [name: string]: IVolumeDefinition;
+    }
+}
 
 /**
  * 
@@ -35,9 +49,7 @@ export class ComposeFile {
 
             for (const volume of service.getVolumes()) {
                 if (volume.volume.type !== "bind") {
-                    if (!Object.keys(volumes).includes(volume.volume.name)) {
-                        volumes = {...volumes, ...volume.volume.toJsonComposeFile()};
-                    }
+                    volumes = {...volumes, ...volume.volume.toJsonComposeFile()};
                 }
             }
         }
@@ -49,5 +61,21 @@ export class ComposeFile {
             volumes,
         };
         return YAML.stringify(ret, 7, 4);
+    }
+
+    public save(path: string) {
+        fs.writeFileSync(path, this.toYaml());
+    }
+
+    static fromYaml(path: string): ComposeFile {
+        const input = YAML.load(path) as IComposeFileJson;
+        
+        const ret = new ComposeFile(input.version);
+        const volumeDefinitions = input.volumes;
+        const networkDefinitions = input.networks;
+        for (const serviceName in input.services) {
+            ret.addService(Service.create(serviceName, input.services[serviceName], volumeDefinitions, networkDefinitions));
+        }
+        return ret;
     }
 }
