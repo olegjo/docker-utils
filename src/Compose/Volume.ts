@@ -11,7 +11,7 @@ export interface IVolumeDefinition {}
 /**
  * Interface for how the volume object looks in the service object when long syntax is used.
  */
-interface IVolumeJsonLongSyntax extends IVolumeOptions {
+export interface IVolumeJsonLongSyntax extends IVolumeOptions {
     type: VolumeType;
     target: string;
     source: string;
@@ -75,7 +75,7 @@ export class Volume {
     /**
      * Constructor.
      * @param type The volume type. If it's of type "volume", docker volume is used. If type is "bind", the volume is bound to a location on the host machine.
-     * @param source If type === "bind", this has to be the location of the volume on the host machine. Else, an empty string must be used.
+     * @param source The source of the volume on the host machine.
      */
     constructor(source: string) {
         this.source = source;
@@ -156,8 +156,8 @@ export class Volume {
     }
     
     /**
-     * 
-     * @param value 
+     * Creates a Volume object form JSON when JSON is on the short format.
+     * @param value A value on the form "source:target" or "source:target:mode".
      */
     private static fromJsonShortSyntax(value: VolumeJsonShortSyntax): [Volume, string, Partial<IVolumeOptions>?] {
         if (typeof value !== "string" || ![2, 3].includes(value.split(":").length)) {
@@ -172,6 +172,10 @@ export class Volume {
         return [ret, to, undefined];
     }
 
+    /**
+     * Creates a volume object from JSON when JSON is using the long format.
+     * @param value A JSON value containing the volume definition using the long format.
+     */
     private static fromJsonLongSyntax(value: IVolumeJsonLongSyntax): [Volume, string, Partial<IVolumeOptions>?] {
         if (typeof value !== "object") {
             throw new Error("Type was not object");
