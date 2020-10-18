@@ -4,6 +4,8 @@ import { INetworkDefinition } from './Network';
 import { IVolumeDefinition } from "./Volume";
 import * as fs from "fs";
 
+export type ComposeFileVersion = string;
+
 export interface IComposeFileJson {
     version: string;
     services: IServiceJson[];
@@ -20,9 +22,9 @@ export interface IComposeFileJson {
  */
 export class ComposeFile {
     private services: Service[] = [];
-    private version: string;
+    private version: ComposeFileVersion;
 
-    constructor(version: string) {
+    constructor(version: ComposeFileVersion) {
         this.version = version;
     }
 
@@ -39,7 +41,7 @@ export class ComposeFile {
         let networks = {};
         let volumes = {};
         for (const service of this.services) {
-            services = {...services, ...service.toJson()};
+            services = {...services, ...service.toJson(this.version)};
 
             for (const network of service.networks) {
                 if (!Object.keys(networks).includes(network.name)) {
@@ -55,7 +57,7 @@ export class ComposeFile {
         }
 
         let ret = {
-            version: this.version,
+            version: this.version.toString(),
             services,
             networks,
             volumes,

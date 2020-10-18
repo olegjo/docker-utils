@@ -1,3 +1,4 @@
+import { ComposeFileVersion } from "./ComposeFile";
 import { Network, NetworkJson, INetworkDefinition } from "./Network";
 import { Port, IPortJson } from './Port';
 import { Volume, VolumeJson, IVolumeDefinition, IVolumeOptions } from "./Volume";
@@ -55,7 +56,7 @@ export class Service {
         return this.envionmentVariables[name];
     }
 
-    public toJson(): object {
+    public toJson(version: ComposeFileVersion): object {
         let config: any = {
             image: this.image,
         };
@@ -67,14 +68,14 @@ export class Service {
         if (this.entrypoint.length > 0)                       config.entrypoint     = this.entrypoint;
         if (this.restart.length > 0)                          config.restart        = this.restart;
         if (this.networks.length > 0)                         config.networks       = this.compileNetworks();
-        if (this.volumes.length > 0)                          config.volumes        = this.compileVolumes();
+        if (this.volumes.length > 0)                          config.volumes        = this.compileVolumes(version);
         return {
             [this.serviceName]: config
         };
     }
 
-    private compileVolumes() {
-        return this.volumes.map((v) => v.volume.toJsonService(v.target, v.options));
+    private compileVolumes(version: ComposeFileVersion) {
+        return this.volumes.map((v) => v.volume.toJsonService(v.target, version, v.options));
     }
 
     private compileNetworks() {

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@types/yamljs": "^0.2.31",
+    "compare-versions": "^3.6.0",
     "yamljs": "^0.3.0"
   },
   "devDependencies": {

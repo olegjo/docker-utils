@@ -1,23 +1,47 @@
+import { ComposeFileVersion } from "./ComposeFile";
+import compareVersions from "compare-versions";
+import { isNullish } from "../utilities/maybe";
+
 /**
  * Interface for the definition of a volume in the overall compose file. This is always just an empty object
  * but this is kept for generality and keeping it similar as for networks.
  */
-export interface IVolumeDefinition {
-    
-}
+export interface IVolumeDefinition {}
 
+/**
+ * Interface for how the volume object looks in the service object when long syntax is used.
+ */
 interface IVolumeJsonLongSyntax extends IVolumeOptions {
     type: VolumeType;
     target: string;
     source: string;
 }
 
-export type VolumeJson = string | IVolumeJsonLongSyntax;
+/**
+ * Volume Object in the Service Object when short syntax is used.
+ */
+export type VolumeJsonShortSyntax = string;
 
+/**
+ * The Volume Object in the Service Object can use either Short or Long syntax.
+ */
+export type VolumeJson = VolumeJsonShortSyntax | IVolumeJsonLongSyntax;
+
+/**
+ * The types of volumes that are supported. Type "volume" means using a docker volume, whereas type "bind"
+ * will bind the volume to the host file system.
+ */
 export type VolumeType = "volume" | "bind";
 
+/**
+ * The consistency. See documentation of docker-compose for details.
+ */
 export type VolumeConsistency = "consistent" | "cached" | "delegated";
 
+/**
+ * Options to pass to the binding of a volume. These options can be different for each service even if the location
+ * on host system disk is the same.
+ */
 export interface IVolumeOptions {
     readOnly: boolean;
     bind: Partial<{
@@ -32,8 +56,13 @@ export interface IVolumeOptions {
     consistency: VolumeConsistency;
 }
 
+/**
+ * Returns whether the volume type is of type "bind" or "volume."
+ * @param source The path/value of the source location on the host machine.
+ */
 function findVolumeType(source: string): VolumeType {
-    if ([".", "/"].includes(source[0])) { // Starts with "." or "/" means it is a bind volume
+    // If it starts with "." or "/" means it is a bind volume
+    if ([".", "/"].includes(source[0])) { 
         return "bind";
     } else {
         return "volume";
@@ -66,14 +95,32 @@ export class Volume {
      * 
      * @param target The target volume inside the container.
      */
-    public toJsonService(target: string, options?: Partial<IVolumeOptions>) {
+    public toJsonService(target: string, version: ComposeFileVersion, options?: Partial<IVolumeOptions>) {
+        let useLongSyntax = true;
+        // Long syntax only supported for version >= 3.2
+        if (compareVersions.compare(version, "3.2", "<")) useLongSyntax = false;
+        
+        // Don't use long syntax if we dont have to: if no options, or only element in options is readOnly.
+        if (!options) useLongSyntax = false;
         if (options) {
+            const keys = Object.keys(options);
+            if (keys.length === 1 && keys.includes("readOnly")) useLongSyntax = false;
+        }
+
+        if (useLongSyntax) {
             return {
                 type: this.type,
                 source: this.source,
                 target,
                 ...options,
             };
+        }
+
+        if (options && !isNullish(options.readOnly)) {
+            let mode = "";
+            if (options.readOnly) mode = "ro";
+            else mode = "rw";
+            return `${this.source}:${target}:${mode}`
         }
         return `${this.source}:${target}`;
     }
@@ -86,6 +133,19 @@ export class Volume {
         return findVolumeType(this.source);
     }
 
+    /**
+     * Generates a Volume object from the volume JSON object in the Service. Used when parsing a docker-compose file.
+     * @param jsonObj The input json.
+     * @returns Array containing of length 3 where the elements are:
+     * 
+     * | Index | Description                            |
+     * |:------|:---------------------------------------|
+     * | 0     | The new Volume                         |
+     * | 1     | The location (target) inside container |
+     * | 2     | Options                                |
+     * 
+     * Will automatically determine if long or short syntax is used. See fromJsonShortSyntax and fromJsonLongSyntax.
+     */
     static fromJson(jsonObj: VolumeJson): [Volume, string, Partial<IVolumeOptions>?] {
         // For now, VolumeJson must be a string;
         if (typeof jsonObj === "string") {
@@ -95,13 +155,20 @@ export class Volume {
         }
     }
     
-    private static fromJsonShortSyntax(value: string): [Volume, string, Partial<IVolumeOptions>?] {
-        if (typeof value !== "string" || value.split(":").length !== 2) {
-            throw new Error("Volume only supports string with format 'from:to'");
+    /**
+     * 
+     * @param value 
+     */
+    private static fromJsonShortSyntax(value: VolumeJsonShortSyntax): [Volume, string, Partial<IVolumeOptions>?] {
+        if (typeof value !== "string" || ![2, 3].includes(value.split(":").length)) {
+            throw new Error("Volume only supports string with format 'from:to' or 'from:to:mode'");
         }
 
-        const [source, to] = value.split(":");
+        const [source, to, mode] = value.split(":");
         const ret = new Volume(source);
+        if (mode) {
+            return [ret, to, {readOnly: mode === "ro"}];
+        }        
         return [ret, to, undefined];
     }
 

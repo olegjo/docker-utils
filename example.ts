@@ -23,7 +23,7 @@ nginxService.addVolume(volConf, "/var/nginx/conf", {readOnly: true, volume: {noc
 // Finally, compile the compose file. 
 // The network and volumes sections are automatically added 
 // based on their presence in the added services
-const composeFile = new Docker.Compose.ComposeFile("2.3");
+const composeFile = new Docker.Compose.ComposeFile("3.3");
 composeFile.addService(dbService);
 composeFile.addService(nginxService);
 
